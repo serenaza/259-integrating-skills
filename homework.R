@@ -1,6 +1,7 @@
 # 259 Homework - integrating skills
 # For full credit, answer at least 8/10 questions
 # List students working with below:
+## Samyukta Jayakumar 
 
 library(tidyverse)
 library(lubridate)
@@ -38,6 +39,20 @@ cities <- c("Charlotte", "Los Angeles", "Houston", "Indianapolis", "Jacksonville
 #> Call the function "read_weather" 
 #> Check by reading/glimpsing a single station's file
 
+# ANSWER
+setwd('us-weather-history')
+df <- read_csv("KCLT.csv")
+
+read_weather <- function(s1){
+  for (i in 1:length(s1)){
+    df <- read_csv(paste0(s1[i], ".csv")) 
+    df$date <- as.Date(df$date) 
+    df$Stations_name <- s1[i]
+  }
+  return(df)
+}
+
+
 
 
 # QUESTION 2
@@ -45,25 +60,38 @@ cities <- c("Charlotte", "Los Angeles", "Houston", "Indianapolis", "Jacksonville
 #> map_dfr() will take each dataframe and automatically bind them.
 #> Save the resulting dataset to "ds"
 
-
+# ANSWER
+ds <- map_dfr(stations,read_weather)
 
 # QUESTION 3
 #> Make a factor called "city" based on the station variable
 #> (station should be the level and city should be the label)
 #> Use fct_count to check that there are 365 days of data for each city 
 
+# ANSWER
+ds$City <- factor(ds$Stations_name, levels = stations, labels = cities)
+fct_count(ds$City)
 
 # QUESTION 4
 #> Since we're scientists, let's convert all the temperatures to C
 #> Write a function to convert F to C, and then use mutate across to 
 #> convert all of the temperatures, rounded to a tenth of a degree
 
-
+# ANSWER
+ftoc <- function(f){
+  celsius <- (f - 32)*(5/9)
+}
+temp_columns <- c("actual_mean_temp","actual_min_temp","actual_max_temp","average_min_temp","average_max_temp","record_min_temp","record_max_temp")
+ds <- ds %>% mutate(across(.cols = temp_columns,~ftoc(.x)))
+ds <- ds %>% mutate(across(.cols = temp_columns,~round(.x,digits=1)))
 
 ### CHECK YOUR WORK
 #> At this point, your data should look like the "compiled_data.csv" file
 #> in data-clean. If it isn't, read in that file to use for the remaining
 #> questions so that you have the right data to work with.
+
+
+
 
 # QUESTION 5
 #> Write a function that counts the number of extreme temperature days,
@@ -74,12 +102,22 @@ cities <- c("Charlotte", "Los Angeles", "Houston", "Indianapolis", "Jacksonville
 #> (Seattle, 20, Charlotte 12, Phoenix 12, etc...)
 #> Don't save this summary over the original dataset!
 
+# ANSWER
+
+
 
 
 # QUESTION 6
 #> Pull out the month from the date and make "month" a factor
 #> Split the tibble by month into a list of tibbles 
 
+# ANSWER
+ds$date <- as.Date (ds$date, format = "%Y-%m-%d")
+ds$date <- format(ds$date, "%m")
+as.factor(ds$date)
+splitds <- split(ds, ds$date)
+
+          
 
 
 # QUESTION 7
@@ -88,16 +126,28 @@ cities <- c("Charlotte", "Los Angeles", "Houston", "Indianapolis", "Jacksonville
 #> Use a for loop, and print the month along with the resulting correlation
 #> Look at the documentation for the ?cor function if you've never used it before
 
+# ANSWER
+?cor
+month<- c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12")
+for (p in month) {
+    cor1[p]$p <- cor(splitds[[p]]$actual_precipitation, splitds[[p]]$average_precipitation)
+    cor2[p]$p <- cor(splitds[[p]]$actual_min_temp, splitds[[p]]$average_min_temp)
+    cor3[p]$p <- cor(splitds[[p]]$actual_max_temp, splitds[[p]]$average_max_temp)
+}
 
+##I wanted to print out the results by using 'cor_output' but I was keep getting an error. 
 
-
+    
 # QUESTION 8
 #> Use the Data Explorer package to plot boxplots of all of the numeric variables in the dataset
 #> grouped by city, then do the same thing grouped by month. 
 #> Finally, use plot_correlation to investigate correlations between the continuous variables only
 #> Check the documentation for plot_correlation for an easy way to do this
 
-
+ds %>% select(City, actual_mean_temp:record_precipitation) %>% plot_boxplot(by = "City")
+ds %>% select(date, actual_mean_temp:record_precipitation) %>% plot_boxplot(by = "date")
+?plot_correlation
+plot_correlation(ds, type = c("continuous"))
 
 
 # QUESTION 9
@@ -105,6 +155,24 @@ cities <- c("Charlotte", "Los Angeles", "Houston", "Indianapolis", "Jacksonville
 #> Use facet_wrap to make a separate plot for each city (3 columns)
 #> Make the points different colors according to month
 
+ds$date <- as.numeric(ds$date)
+ggplot(ds, aes(x = date, y = actual_mean_temp)) + 
+  geom_point() +
+  xlim(1, 12) + 
+  ylim(-40, 40) + 
+  xlab("Month") + 
+  ylab("Actual_Mean_Temp") +
+  geom_vline(xintercept = 0) + 
+  geom_hline(yintercept = 0)
+
+##facet_wrap for each city.
+   ggplot(ds, aes(x = date, y = actual_mean_temp)) + 
+  geom_point() + 
+  facet_wrap("City", ncol = 3)
+
+##Different colors according to month
+  ggplot(ds, aes(x = date, y = actual_mean_temp, color = date)) + 
+    geom_point()
 
 
 
